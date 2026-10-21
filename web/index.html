@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Battery Thermal Management</title>
+  <meta name="description" content="Battery thermal management dashboard: sensor data, cooling analysis, fluids, prediction, digital twin, monitoring and recommendations.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='4' y='9' width='22' height='14' rx='3' fill='%233188c8'/><rect x='26' y='13' width='3' height='6' rx='1' fill='%233188c8'/><rect x='7' y='12' width='9' height='8' rx='1.5' fill='%23d9edff'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <div>
+      <h1>Battery Thermal Management</h1>
+      <p class="sub">KJS-CES-02 &bull; 8 scenarios &bull; Python logic, now in the browser</p>
+    </div>
+    <span class="pill pill-ok">&#9679; Demo mode</span>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button role="tab" data-tab="overview" aria-selected="true">Overview</button>
+    <button role="tab" data-tab="sensor">1. Sensor Data</button>
+    <button role="tab" data-tab="cooling">2. Cooling Analysis</button>
+    <button role="tab" data-tab="fluids">3. Fluids</button>
+    <button role="tab" data-tab="prediction">4. Prediction</button>
+    <button role="tab" data-tab="twin">5. Digital Twin</button>
+    <button role="tab" data-tab="monitor">6. Monitoring</button>
+    <button role="tab" data-tab="database">7. Database</button>
+    <button role="tab" data-tab="recommend">8. Recommendations</button>
+  </nav>
+
+  <main>
+    <!-- Overview -->
+    <section class="panel" data-panel="overview">
+      <div class="cards">
+        <div class="card"><span class="card-title">Battery temperature</span><span class="card-value" id="c-temp">-- °C</span></div>
+        <div class="card"><span class="card-title">Voltage</span><span class="card-value" id="c-volt">-- V</span></div>
+        <div class="card"><span class="card-title">Current</span><span class="card-value" id="c-curr">-- A</span></div>
+        <div class="card"><span class="card-title">Coolant flow</span><span class="card-value" id="c-flow">-- L/min</span></div>
+      </div>
+      <div class="status" id="status" data-level="NONE">Status: waiting for data</div>
+      <h3>Latest sensor reading</h3>
+      <pre class="out" id="latest">No reading yet.</pre>
+      <div class="actions">
+        <button class="btn" id="btn-sample">Load sample data</button>
+        <button class="btn" id="btn-refresh">Refresh dashboard</button>
+        <button class="btn" id="btn-summary">View summary</button>
+      </div>
+      <pre class="out" id="summary" hidden></pre>
+      <p class="note">Educational simulation. Thresholds must be verified for the actual battery.</p>
+    </section>
+
+    <!-- Sensor -->
+    <section class="panel" data-panel="sensor" hidden>
+      <form id="sensor-form" class="grid-form" novalidate>
+        <label>Battery ID<input name="battery_id" value="BAT-01" required></label>
+        <label>Cell ID<input name="cell_id" value="CELL-01" required></label>
+        <label>Temperature °C<input name="temperature" type="number" step="any" value="38.5"></label>
+        <label>Voltage V<input name="voltage" type="number" step="any" value="3.7"></label>
+        <label>Current A<input name="current" type="number" step="any" value="12.0"></label>
+        <label>Coolant temp °C<input name="coolant_temperature" type="number" step="any" value="25.0"></label>
+        <label>Flow L/min<input name="flow_rate" type="number" step="any" value="2.4"></label>
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit">Validate &amp; save reading</button>
+          <button class="btn" type="button" id="btn-random">Insert test reading</button>
+        </div>
+      </form>
+      <p class="msg" id="sensor-msg" role="status"></p>
+      <div class="table-wrap"><table id="readings-table"></table></div>
+    </section>
+
+    <!-- Cooling -->
+    <section class="panel" data-panel="cooling" hidden>
+      <h2>Micro-channel cooling performance</h2>
+      <p class="note">Illustrative configurations, not measured CFD results.</p>
+      <button class="btn btn-primary" id="btn-cooling">Analyze &amp; rank configurations</button>
+      <div id="cooling-out" class="rank-list"></div>
+    </section>
+
+    <!-- Fluids -->
+    <section class="panel" data-panel="fluids" hidden>
+      <h2>Water vs Al₂O₃/Water nanofluid</h2>
+      <p class="note">Cases with a pressure drop above 35 are filtered out before ranking.</p>
+      <button class="btn btn-primary" id="btn-fluids">Compare cooling fluids</button>
+      <div id="fluids-out" class="rank-list"></div>
+    </section>
+
+    <!-- Prediction -->
+    <section class="panel" data-panel="prediction" hidden>
+      <h2>Temperature risk estimation</h2>
+      <form id="pred-form" class="grid-form" novalidate>
+        <label>Battery temperature °C<input name="temp" type="number" step="any" value="38.5"></label>
+        <label>Current A<input name="current" type="number" step="any" value="12"></label>
+        <label>Coolant temperature °C<input name="coolant" type="number" step="any" value="25"></label>
+        <label>Flow L/min<input name="flow" type="number" step="any" value="2.4"></label>
+        <div class="form-actions"><button class="btn btn-primary" type="submit">Estimate temperature risk</button></div>
+      </form>
+      <div class="result" id="pred-out">Enter conditions and run the demonstration predictor.</div>
+    </section>
+
+    <!-- Twin -->
+    <section class="panel" data-panel="twin" hidden>
+      <h2>Digital twin simulator</h2>
+      <p class="note">Compare predicted and observed temperatures using demonstration data.</p>
+      <form id="twin-form" class="grid-form" novalidate>
+        <label>Predicted temperature °C<input name="pred" type="number" step="any" value="40.0"></label>
+        <label>Observed temperature °C<input name="obs" type="number" step="any" value="38.5"></label>
+        <div class="form-actions"><button class="btn btn-primary" type="submit">Compare &amp; save history</button></div>
+      </form>
+      <div class="result" id="twin-out">Prediction error will appear here.</div>
+    </section>
+
+    <!-- Monitor -->
+    <section class="panel" data-panel="monitor" hidden>
+      <h2>Thermal monitoring center</h2>
+      <p class="note">The chart shows saved demonstration readings, not live sensors.</p>
+      <div class="actions">
+        <button class="btn" data-test="34,2.8">Normal test</button>
+        <button class="btn btn-warn" data-test="47,2.0">Warning test</button>
+        <button class="btn btn-crit" data-test="52,0.7">Critical test</button>
+        <span class="spacer"></span>
+        <button class="btn" id="btn-csv">Export CSV</button>
+      </div>
+      <p id="monitor-summary" class="monitor-summary">No readings yet</p>
+      <div class="chart-box"><svg id="trend" role="img" aria-label="Battery temperature trend"></svg><div class="tip" id="tip" hidden></div></div>
+      <div class="legend"><span><i class="sw sw-line"></i>Temperature</span><span><i class="sw sw-warn"></i>Warning 45 °C</span><span><i class="sw sw-crit"></i>Critical 50 °C</span></div>
+    </section>
+
+    <!-- Database -->
+    <section class="panel" data-panel="database" hidden>
+      <h2>Database records</h2>
+      <p class="note">Stored in this browser (same four tables as the SQLite file). Click a row to select it.</p>
+      <div class="actions">
+        <select id="db-table" aria-label="Table">
+          <option value="sensor_readings">sensor_readings</option>
+          <option value="cfd_results">cfd_results</option>
+          <option value="predictions">predictions</option>
+          <option value="maintenance_logs">maintenance_logs</option>
+        </select>
+        <button class="btn" id="btn-load">Load records</button>
+        <button class="btn btn-crit" id="btn-delete">Delete selected reading</button>
+        <span class="spacer"></span>
+        <button class="btn" id="btn-reset">Reset database</button>
+      </div>
+      <p class="msg" id="db-msg" role="status"></p>
+      <div class="table-wrap"><table id="db-grid" class="selectable"></table></div>
+    </section>
+
+    <!-- Recommend -->
+    <section class="panel" data-panel="recommend" hidden>
+      <h2>Cooling recommendations &amp; predictive maintenance</h2>
+      <p class="note">Recommendations use demonstration rules only.</p>
+      <button class="btn btn-primary" id="btn-recommend">Generate recommendation</button>
+      <pre class="out" id="recommend-out">Run the rules against the latest reading.</pre>
+      <h3>Recent maintenance alerts</h3>
+      <div class="table-wrap"><table id="alerts-table"></table></div>
+    </section>
+  </main>
+
+  <footer>Battery Thermal Management &middot; educational demonstration, not a safety system.</footer>
+  <script src="app.js"></script>
+</body>
+</html>
